@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TomCat2357/claude-mcp-toggle.git"
+    "url": "git+https://github.com/TomCat2357/McpConfig.git"
   },
   "keywords": [
     "claude",
@@ -22,7 +22,7 @@
   "author": "",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/TomCat2357/claude-mcp-toggle/issues"
+    "url": "https://github.com/TomCat2357/McpConfig/issues"
   },
-  "homepage": "https://github.com/TomCat2357/claude-mcp-toggle#readme"
+  "homepage": "https://github.com/TomCat2357/McpConfig#readme"
 }
