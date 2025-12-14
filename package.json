@@ -4,7 +4,7 @@
   "description": "Toggle Claude MCP servers between enabled and disabled states",
   "type": "module",
   "bin": {
-    "claude-mcp-toggle": "./bin/claude-mcp-toggle.js"
+    "mcp-toggle": "./bin/mcp-toggle.js"
   },
   "engines": {
     "node": ">=20"
@@ -24,5 +24,8 @@
   "bugs": {
     "url": "https://github.com/TomCat2357/McpConfig/issues"
   },
-  "homepage": "https://github.com/TomCat2357/McpConfig#readme"
+  "homepage": "https://github.com/TomCat2357/McpConfig#readme",
+  "dependencies": {
+    "@iarna/toml": "^3.0.0"
+  }
 }

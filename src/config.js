@@ -1,14 +1,48 @@
 import { promises as fs } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 
-const CONFIG_PATH = join(homedir(), ".claude.json");
-const BACKUP_PATH = join(homedir(), ".ccmcp_backup.json"); // 参照実装に合わせる
+let tomlModule;
+async function getToml() {
+  if (!tomlModule) {
+    tomlModule = await import("@iarna/toml");
+  }
+  return tomlModule;
+}
+
+const CLAUDE_CONFIG_PATH = join(homedir(), ".claude.json");
+const CLAUDE_BACKUP_PATH = join(homedir(), ".ccmcp_backup.json"); // 参照実装に合わせる
+
+const CODEX_CONFIG_PATH = join(homedir(), ".codex", "config.toml");
+const CODEX_BACKUP_PATH = join(homedir(), ".codex", "ccmcp_backup.toml");
+
+function normalizeTarget(target) {
+  return target === "codex" ? "codex" : "claude";
+}
+
+function getTargetPaths(target) {
+  const t = normalizeTarget(target);
+  if (t === "codex") {
+    return { CONFIG_PATH: CODEX_CONFIG_PATH, BACKUP_PATH: CODEX_BACKUP_PATH, format: "toml" };
+  }
+  return { CONFIG_PATH: CLAUDE_CONFIG_PATH, BACKUP_PATH: CLAUDE_BACKUP_PATH, format: "json" };
+}
 
 async function readJson(path, fallback) {
   try {
     const txt = await fs.readFile(path, "utf8");
     return JSON.parse(txt);
+  } catch {
+    return fallback;
+  }
+}
+
+async function readToml(path, fallback) {
+  try {
+    const txt = await fs.readFile(path, "utf8");
+    const TOML = await getToml();
+    const parsed = TOML.parse(txt);
+    return parsed && typeof parsed === "object" ? parsed : fallback;
   } catch {
     return fallback;
   }
@@ -21,45 +55,98 @@ async function writeJsonAtomic(path, obj) {
   await fs.rename(tmp, path);
 }
 
-export async function loadClaudeFullConfig() {
-  // claude.json が無い場合もあり得るので fallback 生成
-  const full = await readJson(CONFIG_PATH, { mcpServers: {} });
-  if (!full || typeof full !== "object") return { mcpServers: {} };
-  if (!full.mcpServers || typeof full.mcpServers !== "object") full.mcpServers = {};
-  return full;
+async function writeTomlAtomic(path, obj) {
+  await fs.mkdir(dirname(path), { recursive: true });
+  const tmp = `${path}.tmp.${process.pid}.${Date.now()}`;
+  const TOML = await getToml();
+  const txt = TOML.stringify(obj) + "\n";
+  await fs.writeFile(tmp, txt, "utf8");
+  await fs.rename(tmp, path);
 }
 
-export async function saveClaudeFullConfig(fullConfig) {
-  // 既存キーは fullConfig 側で保持している前提
-  await writeJsonAtomic(CONFIG_PATH, fullConfig);
+function ensureMcpServers(fullConfig) {
+  if (!fullConfig || typeof fullConfig !== "object") fullConfig = {};
+
+  const hasCamel = fullConfig.mcpServers && typeof fullConfig.mcpServers === "object";
+  const hasSnake = fullConfig.mcp_servers && typeof fullConfig.mcp_servers === "object";
+  const key = hasCamel ? "mcpServers" : hasSnake ? "mcp_servers" : "mcpServers";
+
+  if (!fullConfig[key] || typeof fullConfig[key] !== "object") fullConfig[key] = {};
+  return { fullConfig, key, mcpServers: fullConfig[key] };
 }
 
-export async function loadBackupConfig() {
-  const backup = await readJson(BACKUP_PATH, { disabledServers: {} });
-  if (!backup || typeof backup !== "object") return { disabledServers: {} };
-  if (!backup.disabledServers || typeof backup.disabledServers !== "object") backup.disabledServers = {};
-  return backup;
+function ensureDisabledServers(backupConfig) {
+  if (!backupConfig || typeof backupConfig !== "object") backupConfig = {};
+
+  const hasCamel =
+    backupConfig.disabledServers && typeof backupConfig.disabledServers === "object";
+  const hasSnake =
+    backupConfig.disabled_servers && typeof backupConfig.disabled_servers === "object";
+  const key = hasCamel ? "disabledServers" : hasSnake ? "disabled_servers" : "disabledServers";
+
+  if (!backupConfig[key] || typeof backupConfig[key] !== "object") backupConfig[key] = {};
+  return { backupConfig, key, disabledServers: backupConfig[key] };
 }
 
-export async function saveBackupConfig(backupConfig) {
-  await writeJsonAtomic(BACKUP_PATH, backupConfig);
+async function loadFullConfig(target) {
+  const { CONFIG_PATH, format } = getTargetPaths(target);
+  if (format === "toml") {
+    const { fullConfig } = ensureMcpServers(await readToml(CONFIG_PATH, {}));
+    return fullConfig;
+  }
+  const { fullConfig } = ensureMcpServers(await readJson(CONFIG_PATH, {}));
+  return fullConfig;
 }
 
-export function getPaths() {
+async function saveFullConfig(target, fullConfig) {
+  const { CONFIG_PATH, format } = getTargetPaths(target);
+  const { fullConfig: normalized } = ensureMcpServers(fullConfig);
+  if (format === "toml") {
+    await writeTomlAtomic(CONFIG_PATH, normalized);
+    return;
+  }
+  await writeJsonAtomic(CONFIG_PATH, normalized);
+}
+
+async function loadBackupConfig(target) {
+  const { BACKUP_PATH, format } = getTargetPaths(target);
+  if (format === "toml") {
+    const { backupConfig } = ensureDisabledServers(await readToml(BACKUP_PATH, {}));
+    return backupConfig;
+  }
+  const { backupConfig } = ensureDisabledServers(await readJson(BACKUP_PATH, {}));
+  return backupConfig;
+}
+
+async function saveBackupConfig(target, backupConfig) {
+  const { BACKUP_PATH, format } = getTargetPaths(target);
+  const { backupConfig: normalized } = ensureDisabledServers(backupConfig);
+  if (format === "toml") {
+    await writeTomlAtomic(BACKUP_PATH, normalized);
+    return;
+  }
+  await writeJsonAtomic(BACKUP_PATH, normalized);
+}
+
+export function getPaths(target) {
+  const { CONFIG_PATH, BACKUP_PATH } = getTargetPaths(target);
   return { CONFIG_PATH, BACKUP_PATH };
 }
 
-export async function listServers() {
-  const full = await loadClaudeFullConfig();
-  const backup = await loadBackupConfig();
+export async function listServers(target = "claude") {
+  const full = await loadFullConfig(target);
+  const backup = await loadBackupConfig(target);
 
-  const enabled = Object.entries(full.mcpServers).map(([name, cfg]) => ({
+  const { mcpServers } = ensureMcpServers(full);
+  const { disabledServers } = ensureDisabledServers(backup);
+
+  const enabled = Object.entries(mcpServers).map(([name, cfg]) => ({
     name,
     enabled: true,
     cfg
   }));
 
-  const disabled = Object.entries(backup.disabledServers).map(([name, cfg]) => ({
+  const disabled = Object.entries(disabledServers).map(([name, cfg]) => ({
     name,
     enabled: false,
     cfg
@@ -69,43 +156,46 @@ export async function listServers() {
   return [...enabled, ...disabled].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-export async function toggleServer(name) {
-  const full = await loadClaudeFullConfig();
-  const backup = await loadBackupConfig();
+export async function toggleServer(target = "claude", name) {
+  const full = await loadFullConfig(target);
+  const backup = await loadBackupConfig(target);
 
-  if (full.mcpServers[name]) {
+  const { mcpServers } = ensureMcpServers(full);
+  const { disabledServers } = ensureDisabledServers(backup);
+
+  if (mcpServers[name]) {
     // disable: active -> backup
-    backup.disabledServers[name] = full.mcpServers[name];
-    delete full.mcpServers[name];
+    disabledServers[name] = mcpServers[name];
+    delete mcpServers[name];
 
-    await Promise.all([saveClaudeFullConfig(full), saveBackupConfig(backup)]);
+    await Promise.all([saveFullConfig(target, full), saveBackupConfig(target, backup)]);
     return { newState: false };
   }
 
-  if (backup.disabledServers[name]) {
+  if (disabledServers[name]) {
     // enable: backup -> active
-    full.mcpServers[name] = backup.disabledServers[name];
-    delete backup.disabledServers[name];
+    mcpServers[name] = disabledServers[name];
+    delete disabledServers[name];
 
-    await Promise.all([saveClaudeFullConfig(full), saveBackupConfig(backup)]);
+    await Promise.all([saveFullConfig(target, full), saveBackupConfig(target, backup)]);
     return { newState: true };
   }
 
   throw new Error(`Server '${name}' not found`);
 }
 
-export async function enableServer(name) {
-  const servers = await listServers();
+export async function enableServer(target = "claude", name) {
+  const servers = await listServers(target);
   const s = servers.find((x) => x.name === name);
   if (!s) throw new Error(`Server '${name}' not found`);
   if (s.enabled) return { newState: true };
-  return toggleServer(name);
+  return toggleServer(target, name);
 }
 
-export async function disableServer(name) {
-  const servers = await listServers();
+export async function disableServer(target = "claude", name) {
+  const servers = await listServers(target);
   const s = servers.find((x) => x.name === name);
   if (!s) throw new Error(`Server '${name}' not found`);
   if (!s.enabled) return { newState: false };
-  return toggleServer(name);
+  return toggleServer(target, name);
 }

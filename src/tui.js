@@ -15,16 +15,31 @@ const ansi = {
   reset: "\x1b[0m"
 };
 
+const KNOWN_TARGETS = new Set(["claude", "codex"]);
+
 function isTTYInteractive() {
   return stdout.isTTY && stdin.isTTY && process.env.CI !== "true";
 }
 
-function render(title, items, selected) {
+function parseTarget(args) {
+  const [target, ...rest] = args;
+  if (!target) return { target: null, rest: [] };
+  if (!KNOWN_TARGETS.has(target)) return { target: null, rest: args };
+  return { target, rest };
+}
+
+function targetLabel(target) {
+  return target === "codex" ? "Codex" : "Claude";
+}
+
+function render(title, items, selected, paths) {
   stdout.write(ansi.clear);
   stdout.write(`\n  ${title}\n\n`);
 
   if (items.length === 0) {
-    stdout.write("  No MCP servers found in ~/.claude.json and backup.\n\n");
+    stdout.write("  No MCP servers found in:\n");
+    stdout.write(`  ${paths.CONFIG_PATH}\n`);
+    stdout.write(`  ${paths.BACKUP_PATH}\n\n`);
     return;
   }
 
@@ -46,23 +61,31 @@ function render(title, items, selected) {
 }
 
 function usage() {
-  const { CONFIG_PATH, BACKUP_PATH } = getPaths();
+  const claude = getPaths("claude");
+  const codex = getPaths("codex");
   stdout.write(`
 Usage:
-  claude-mcp-toggle                # interactive (TTY)
-  claude-mcp-toggle list
-  claude-mcp-toggle toggle <name>
-  claude-mcp-toggle enable <name>
-  claude-mcp-toggle disable <name>
+  mcp-toggle <claude|codex>                # interactive (TTY)
+  mcp-toggle <claude|codex> list
+  mcp-toggle <claude|codex> toggle <name>
+  mcp-toggle <claude|codex> enable <name>
+  mcp-toggle <claude|codex> disable <name>
 
 Files:
-  ${CONFIG_PATH}
-  ${BACKUP_PATH}
+  claude: ${claude.CONFIG_PATH}
+  claude: ${claude.BACKUP_PATH}
+  codex:  ${codex.CONFIG_PATH}
+  codex:  ${codex.BACKUP_PATH}
 `.trimStart());
 }
 
 async function runNonInteractive(args) {
-  const [cmd, name] = args;
+  const { target, rest } = parseTarget(args);
+  if (!target) {
+    usage();
+    throw new Error("Missing or invalid <claude|codex>");
+  }
+  const [cmd, name] = rest;
 
   if (!cmd || cmd === "help" || cmd === "-h" || cmd === "--help") {
     usage();
@@ -70,7 +93,7 @@ async function runNonInteractive(args) {
   }
 
   if (cmd === "list") {
-    const servers = await listServers();
+    const servers = await listServers(target);
     if (servers.length === 0) {
       stdout.write("No MCP servers.\n");
       return;
@@ -83,21 +106,21 @@ async function runNonInteractive(args) {
 
   if (cmd === "toggle") {
     if (!name) throw new Error("Missing <name>");
-    const r = await toggleServer(name);
+    const r = await toggleServer(target, name);
     stdout.write(`Server '${name}' is now ${r.newState ? "ENABLED" : "DISABLED"}\n`);
     return;
   }
 
   if (cmd === "enable") {
     if (!name) throw new Error("Missing <name>");
-    const r = await enableServer(name);
+    const r = await enableServer(target, name);
     stdout.write(`Server '${name}' is now ${r.newState ? "ENABLED" : "DISABLED"}\n`);
     return;
   }
 
   if (cmd === "disable") {
     if (!name) throw new Error("Missing <name>");
-    const r = await disableServer(name);
+    const r = await disableServer(target, name);
     stdout.write(`Server '${name}' is now ${r.newState ? "ENABLED" : "DISABLED"}\n`);
     return;
   }
@@ -105,8 +128,9 @@ async function runNonInteractive(args) {
   throw new Error(`Unknown command: ${cmd}`);
 }
 
-async function runInteractive() {
+async function runInteractive(target) {
   let selected = 0;
+  const paths = getPaths(target);
 
   const cleanup = () => {
     try {
@@ -117,9 +141,9 @@ async function runInteractive() {
   };
 
   const readAndRender = async () => {
-    const servers = await listServers();
+    const servers = await listServers(target);
     selected = Math.max(0, Math.min(selected, Math.max(0, servers.length - 1)));
-    render("Claude MCP Toggle", servers, selected);
+    render(`${targetLabel(target)} MCP Toggle`, servers, selected, paths);
     return servers;
   };
 
@@ -154,7 +178,7 @@ async function runInteractive() {
         // SPACE: toggle
         if (code === 32 && servers[selected]) {
           const name = servers[selected].name;
-          await toggleServer(name);
+          await toggleServer(target, name);
           servers = await readAndRender();
           return;
         }
@@ -167,16 +191,22 @@ async function runInteractive() {
 }
 
 export async function run(args) {
+  const { target, rest } = parseTarget(args);
+  if (!target) {
+    usage();
+    throw new Error("Missing or invalid <claude|codex>");
+  }
+
   if (!isTTYInteractive()) {
     await runNonInteractive(args);
     return;
   }
 
-  // TTY でも args があるならサブコマンド優先
-  if (args.length > 0) {
+  // TTY でもサブコマンドがあるなら非インタラクティブ優先
+  if (rest.length > 0) {
     await runNonInteractive(args);
     return;
   }
 
-  await runInteractive();
+  await runInteractive(target);
 }

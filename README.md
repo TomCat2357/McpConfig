@@ -1,12 +1,12 @@
-# claude-mcp-toggle
+# mcp-toggle
 
-~/.claude.json の MCP サーバーを有効化/無効化するCLIツール
+Claude Code（`~/.claude.json`）と Codex CLI（`~/.codex/config.toml`）の MCP サーバーを有効化/無効化するCLIツール
 
 ## 特徴
 
 - インタラクティブな TUI（矢印キー + スペースで切り替え）
 - サブコマンドによるスクリプト対応
-- ~/.claude.json の mcpServers を ~/.ccmcp_backup.json に退避/復帰
+- 対象（`claude` / `codex`）を引数で切り替え（省略時は `claude`）
 
 ## インストール
 
@@ -19,14 +19,14 @@ npx --yes github:TomCat2357/McpConfig
 `npx github:...` が無反応のまま止まる場合は、GitHub への接続方式（SSH 認証待ち等）で詰まっている可能性があります。HTTPS を明示して実行してください：
 
 ```bash
-npx --yes --package git+https://github.com/TomCat2357/McpConfig.git claude-mcp-toggle
+npx --yes --package git+https://github.com/TomCat2357/McpConfig.git mcp-toggle claude
 ```
 
 ### グローバルインストール
 
 ```bash
 npm install -g github:TomCat2357/McpConfig
-claude-mcp-toggle
+mcp-toggle claude
 ```
 
 `npm install -g github:...` が止まる場合：
@@ -40,7 +40,7 @@ npm install -g git+https://github.com/TomCat2357/McpConfig.git
 ```bash
 git clone https://github.com/TomCat2357/McpConfig.git
 cd McpConfig
-chmod +x bin/claude-mcp-toggle.js
+chmod +x bin/mcp-toggle.js
 npm link
 ```
 
@@ -49,13 +49,19 @@ npm link
 ### インタラクティブモード
 
 ```bash
-claude-mcp-toggle
+mcp-toggle claude
 ```
 
 または
 
 ```bash
 npx --yes github:TomCat2357/McpConfig
+```
+
+対象を `codex` にする場合：
+
+```bash
+mcp-toggle codex
 ```
 
 操作方法：
@@ -67,25 +73,33 @@ npx --yes github:TomCat2357/McpConfig
 
 ```bash
 # サーバー一覧表示
-claude-mcp-toggle list
+mcp-toggle claude list
+mcp-toggle codex list
 
 # 特定サーバーの切り替え
-claude-mcp-toggle toggle サーバー名
+mcp-toggle claude toggle サーバー名
+mcp-toggle codex toggle サーバー名
 
 # 特定サーバーを有効化
-claude-mcp-toggle enable サーバー名
+mcp-toggle claude enable サーバー名
+mcp-toggle codex enable サーバー名
 
 # 特定サーバーを無効化
-claude-mcp-toggle disable サーバー名
+mcp-toggle claude disable サーバー名
+mcp-toggle codex disable サーバー名
 
 # ヘルプ表示
-claude-mcp-toggle help
+mcp-toggle claude help
 ```
 
 ## 動作
 
-- **有効化**: ~/.ccmcp_backup.json の disabledServers から ~/.claude.json の mcpServers に移動
-- **無効化**: ~/.claude.json の mcpServers から ~/.ccmcp_backup.json の disabledServers に移動
+- **有効化**: バックアップ側の `disabledServers` から設定側の `mcpServers` に移動
+- **無効化**: 設定側の `mcpServers` からバックアップ側の `disabledServers` に移動
+
+対象別のファイル：
+- **claude**: `~/.claude.json`, `~/.ccmcp_backup.json`
+- **codex**: `~/.codex/config.toml`, `~/.codex/ccmcp_backup.toml`
 
 ## 必要要件
 
