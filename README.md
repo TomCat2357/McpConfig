@@ -13,7 +13,13 @@
 ### npx で直接実行（GitHub から）
 
 ```bash
-npx github:TomCat2357/claude-mcp-toggle
+npx --yes github:TomCat2357/claude-mcp-toggle
+```
+
+`npx github:...` が無反応のまま止まる場合は、GitHub への接続方式（SSH 認証待ち等）で詰まっている可能性があります。HTTPS を明示して実行してください：
+
+```bash
+npx --yes --package git+https://github.com/TomCat2357/claude-mcp-toggle.git claude-mcp-toggle
 ```
 
 ### グローバルインストール
@@ -21,6 +27,12 @@ npx github:TomCat2357/claude-mcp-toggle
 ```bash
 npm install -g github:TomCat2357/claude-mcp-toggle
 claude-mcp-toggle
+```
+
+`npm install -g github:...` が止まる場合：
+
+```bash
+npm install -g git+https://github.com/TomCat2357/claude-mcp-toggle.git
 ```
 
 ### ローカル開発
