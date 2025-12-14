@@ -1,0 +1,28 @@
+{
+  "name": "claude-mcp-toggle",
+  "version": "0.1.0",
+  "description": "Toggle Claude MCP servers between enabled and disabled states",
+  "type": "module",
+  "bin": {
+    "claude-mcp-toggle": "./bin/claude-mcp-toggle.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TomCat2357/claude-mcp-toggle.git"
+  },
+  "keywords": [
+    "claude",
+    "mcp",
+    "toggle",
+    "cli"
+  ],
+  "author": "",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/TomCat2357/claude-mcp-toggle/issues"
+  },
+  "homepage": "https://github.com/TomCat2357/claude-mcp-toggle#readme"
+}

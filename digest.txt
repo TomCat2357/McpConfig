@@ -1,0 +1,1495 @@
+Directory structure:
+└── karaage0703-ccmcp.git/
+    ├── README.md
+    ├── eslint.config.js
+    ├── LICENSE
+    ├── package.json
+    ├── README_ja.md
+    ├── tsconfig.json
+    ├── tsdown.config.ts
+    └── src/
+        ├── cli.ts
+        ├── config.ts
+        ├── index.ts
+        ├── monitor.ts
+        ├── presets.ts
+        ├── tui.ts
+        └── types.ts
+
+================================================
+FILE: README.md
+================================================
+# ccmcp - Claude Code MCP Control Panel
+
+[日本語版 README](./README_ja.md)
+
+🔧 Interactive MCP server management tool for Claude Code
+
+## Features
+
+- **📋 List MCP servers** - View all configured MCP servers
+- **🔄 Toggle servers** - Enable/disable MCP servers with simple keystrokes
+- **📊 Status monitoring** - Check if MCP servers are running
+- **🎮 Interactive interface** - Navigate with arrow keys, toggle with space
+- **📤 Export to mmcp** - Export Claude Code settings to mmcp for cross-CLI management
+- **🚀 Fast and lightweight** - Built with TypeScript for speed
+
+## Installation
+
+### Option 1: Using npx (Recommended)
+
+```bash
+# Run directly without installation
+npx ccmcp@latest
+
+# Or run specific version
+npx ccmcp@1.1.0
+```
+
+### Option 2: Global Installation
+
+```bash
+# Install globally from npm
+npm install -g ccmcp
+
+# Then run anywhere
+ccmcp
+```
+
+### Option 3: Development Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/karaage0703/ccmcp.git
+cd ccmcp
+npm install
+npm run build
+
+# Run directly
+npm start
+
+# Or install globally from local build
+npm install -g .
+ccmcp
+```
+
+## Usage
+
+### mmcp Integration
+
+Export your Claude Code MCP servers to [mmcp](https://www.npmjs.com/package/mmcp) for cross-CLI management:
+
+```bash
+# 1. Install mmcp first (if not already installed)
+npm install -g mmcp
+
+# 2. Export Claude Code settings to mmcp format
+ccmcp export-to-mmcp
+
+# 3. Add target CLI agents (e.g., Codex CLI)
+mmcp agents add codex-cli
+
+# 4. Apply settings to target CLIs
+mmcp apply
+```
+
+**What is mmcp?**
+[mmcp](https://github.com/kou-pg-0131/mmcp) is a CLI tool that centrally manages MCP server configurations across multiple AI agents (Claude Code, Codex CLI, Cursor, Gemini CLI, etc.).
+
+### Interactive Mode (Default)
+
+Simply run `ccmcp` to start the interactive interface:
+
+```bash
+# Using npx
+npx ccmcp@latest
+
+# Or if installed globally
+ccmcp
+
+# Or from development setup
+npm start
+```
+
+**Controls:**
+- `↑/↓` - Navigate through servers
+- `SPACE` - Toggle server (disable/enable)
+- `Q` - Quit
+
+### Non-Interactive Mode
+
+Perfect for CI/scripts or non-TTY environments:
+
+```bash
+# Using npx
+CI=true npx ccmcp@latest
+
+# Or if installed globally
+CI=true ccmcp
+
+# Or from development setup
+CI=true npm start
+```
+
+Shows list of all configured servers without interactive interface.
+
+## How It Works
+
+ccmcp manages your Claude Code MCP servers using a safe backup system:
+
+- **Config Path**: `~/.claude.json` (main Claude Code configuration)
+- **Backup Path**: `~/.ccmcp_backup.json` (disabled servers storage)
+- **Server Management**: Moves servers between active and backup files
+- **Status Monitoring**: Tests server commands to check availability
+
+### Server States
+
+- **Enabled**: Server exists in `~/.claude.json` and is active
+- **Disabled**: Server is moved to `~/.ccmcp_backup.json` and hidden from Claude Code
+
+This approach ensures:
+- ✅ Claude Code correctly recognizes disabled servers as unavailable
+- ✅ Server configurations are safely preserved for restoration
+- ✅ No interference with Claude Code's configuration format
+
+## Configuration Files
+
+### Active servers (`~/.claude.json`)
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx", 
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}
+```
+
+### Disabled servers (`~/.ccmcp_backup.json`)
+```json
+{
+  "disabledServers": {
+    "markitdown": {
+      "command": "uvx",
+      "args": ["markitdown-mcp"]
+    }
+  }
+}
+```
+
+## Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run dev
+
+# Type check
+npm run typecheck
+
+# Build for distribution
+npm run build
+```
+
+## Requirements
+
+- Node.js 20.19.4 or later
+- Claude Code installed and configured
+- macOS (current implementation assumes macOS paths)
+
+## Architecture
+
+- **TypeScript** - Type-safe development
+- **Native Node.js** - No external dependencies for UI
+- **Direct file manipulation** - Reads/writes Claude config directly
+- **Process monitoring** - Tests server availability
+
+## Related Projects
+
+- [ccusage](https://github.com/ryoppippi/ccusage) - Claude Code usage analysis tool that inspired this project
+
+## License
+
+MIT License - Feel free to use and modify!
+
+
+================================================
+FILE: eslint.config.js
+================================================
+import js from '@eslint/js'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
+
+export default tseslint.config(
+	js.configs.recommended,
+	...tseslint.configs.recommended,
+	{
+		languageOptions: {
+			ecmaVersion: 2022,
+			sourceType: 'module',
+			globals: {
+				...globals.node,
+				...globals.es2022,
+			},
+		},
+		rules: {
+			'@typescript-eslint/no-unused-vars': ['error', { 
+				argsIgnorePattern: '^_',
+				varsIgnorePattern: '^_' 
+			}],
+			'no-console': 'off',
+			'prefer-const': 'error',
+		},
+	},
+	{
+		ignores: ['dist/**', 'node_modules/**', '*.config.*'],
+	}
+)
+
+
+================================================
+FILE: LICENSE
+================================================
+MIT License
+
+Copyright (c) 2025 karaage
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+
+================================================
+FILE: package.json
+================================================
+{
+	"name": "ccmcp",
+	"type": "module",
+	"version": "1.1.1",
+	"description": "Claude Code MCP Control Panel - Interactive MCP server management tool",
+	"author": "karaage",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/karaage0703/ccmcp.git"
+	},
+	"bugs": {
+		"url": "https://github.com/karaage0703/ccmcp/issues"
+	},
+	"homepage": "https://github.com/karaage0703/ccmcp#readme",
+	"keywords": [
+		"claude-code",
+		"mcp",
+		"cli",
+		"management",
+		"interactive",
+		"tui"
+	],
+	"exports": {
+		".": "./dist/index.js"
+	},
+	"main": "./dist/index.js",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"bin": {
+		"ccmcp": "./dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=20.19.4"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "bun run ./src/index.ts",
+		"format": "npm run lint -- --fix",
+		"lint": "eslint --cache .",
+		"prepack": "npm run build",
+		"start": "tsx ./src/index.ts",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"picocolors": "^1.1.1"
+	},
+	"devDependencies": {
+		"@eslint/js": "^9.35.0",
+		"@types/bun": "^1.2.20",
+		"@types/node": "^22.18.1",
+		"eslint": "^9.33.0",
+		"globals": "^16.3.0",
+		"tsdown": "^0.14.2",
+		"tsx": "^4.20.5",
+		"typescript": "^5.6.0",
+		"typescript-eslint": "^8.43.0"
+	}
+}
+
+
+
+================================================
+FILE: README_ja.md
+================================================
+# ccmcp - Claude Code MCP コントロールパネル
+
+🔧 Claude Code 用インタラクティブ MCP サーバー管理ツール
+
+## 機能
+
+- **📋 MCP サーバー一覧表示** - 設定済みの全 MCP サーバーを表示
+- **🔄 サーバー切り替え** - 簡単なキー操作で MCP サーバーの有効/無効を切り替え
+- **📊 ステータス監視** - MCP サーバーの実行状態を確認
+- **🎮 インタラクティブインターフェース** - 矢印キーでナビゲート、スペースキーで切り替え
+- **📤 mmcp へエクスポート** - Claude Code 設定を mmcp にエクスポートして複数 CLI 間で管理
+- **🚀 高速・軽量** - TypeScript で構築された高速動作
+
+## インストール
+
+### オプション1: npx を使用（推奨）
+
+```bash
+# インストール不要で直接実行
+npx ccmcp@latest
+
+# または特定バージョンを実行
+npx ccmcp@1.1.0
+```
+
+### オプション2: グローバルインストール
+
+```bash
+# npm からグローバルインストール
+npm install -g ccmcp
+
+# どこからでも実行可能
+ccmcp
+```
+
+### オプション3: 開発環境セットアップ
+
+```bash
+# リポジトリをクローン
+git clone https://github.com/karaage0703/ccmcp.git
+cd ccmcp
+npm install
+npm run build
+
+# 直接実行
+npm start
+
+# またはローカルビルドからグローバルインストール
+npm install -g .
+ccmcp
+```
+
+## 使い方
+
+### mmcp 連携
+
+Claude Code の MCP サーバーを [mmcp](https://www.npmjs.com/package/mmcp) にエクスポートして複数 CLI 間で管理：
+
+```bash
+# 1. mmcp をインストール（未インストールの場合）
+npm install -g mmcp
+
+# 2. Claude Code 設定を mmcp 形式にエクスポート
+ccmcp export-to-mmcp
+
+# 3. ターゲット CLI エージェントを追加（例：Codex CLI）
+mmcp agents add codex-cli
+
+# 4. ターゲット CLI に設定を適用
+mmcp apply
+```
+
+**mmcp とは？**
+[mmcp](https://github.com/kou-pg-0131/mmcp) は、複数の AI エージェント（Claude Code、Codex CLI、Cursor、Gemini CLI など）間で MCP サーバー設定を一元管理する CLI ツールです。
+
+### インタラクティブモード（デフォルト）
+
+`ccmcp` を実行するだけでインタラクティブインターフェースが起動します：
+
+```bash
+# npx を使用
+npx ccmcp@latest
+
+# またはグローバルインストール済みの場合
+ccmcp
+
+# または開発環境から
+npm start
+```
+
+**操作方法：**
+- `↑/↓` - サーバー間を移動
+- `SPACE` - サーバーの切り替え（無効化/有効化）
+- `Q` - 終了
+
+### 非インタラクティブモード
+
+CI/スクリプトや非 TTY 環境に最適：
+
+```bash
+# npx を使用
+CI=true npx ccmcp@latest
+
+# またはグローバルインストール済みの場合
+CI=true ccmcp
+
+# または開発環境から
+CI=true npm start
+```
+
+インタラクティブインターフェースなしで設定済みサーバーの一覧を表示します。
+
+## 仕組み
+
+ccmcp は安全なバックアップシステムを使用して Claude Code の MCP サーバーを管理します：
+
+- **設定パス**: `~/.claude.json`（Claude Code のメイン設定）
+- **バックアップパス**: `~/.ccmcp_backup.json`（無効化されたサーバーの保存場所）
+- **サーバー管理**: アクティブファイルとバックアップファイル間でサーバーを移動
+- **ステータス監視**: サーバーコマンドをテストして可用性を確認
+
+### サーバーの状態
+
+- **有効**: `~/.claude.json` にサーバーが存在し、アクティブ
+- **無効**: `~/.ccmcp_backup.json` にサーバーが移動され、Claude Code からは非表示
+
+このアプローチにより以下が保証されます：
+- ✅ Claude Code が無効化されたサーバーを正しく利用不可として認識
+- ✅ サーバー設定が復元のために安全に保持
+- ✅ Claude Code の設定形式への干渉なし
+
+## 設定ファイル
+
+### アクティブサーバー（`~/.claude.json`）
+```json
+{
+  "mcpServers": {
+    "context7": {
+      "command": "npx",
+      "args": ["-y", "@upstash/context7-mcp@latest"]
+    }
+  }
+}
+```
+
+### 無効化されたサーバー（`~/.ccmcp_backup.json`）
+```json
+{
+  "disabledServers": {
+    "markitdown": {
+      "command": "uvx",
+      "args": ["markitdown-mcp"]
+    }
+  }
+}
+```
+
+## 開発
+
+```bash
+# 依存関係をインストール
+npm install
+
+# 開発モードで実行
+npm run dev
+
+# 型チェック
+npm run typecheck
+
+# 配布用にビルド
+npm run build
+```
+
+## 要件
+
+- Node.js 20.19.4 以降
+- Claude Code がインストール・設定済み
+- macOS（現在の実装は macOS パスを想定）
+
+## アーキテクチャ
+
+- **TypeScript** - 型安全な開発
+- **ネイティブ Node.js** - UI に外部依存なし
+- **直接ファイル操作** - Claude 設定を直接読み書き
+- **プロセス監視** - サーバーの可用性をテスト
+
+## 関連プロジェクト
+
+- [ccusage](https://github.com/ryoppippi/ccusage) - このプロジェクトのインスピレーション元となった Claude Code 使用状況分析ツール
+
+## ライセンス
+
+MIT License - 自由に使用・改変できます！
+
+
+
+================================================
+FILE: tsconfig.json
+================================================
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"skipLibCheck": true,
+		"esModuleInterop": true,
+		"allowSyntheticDefaultImports": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"isolatedModules": true,
+		"noEmit": true,
+		"declaration": true,
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"types": ["node"]
+	},
+	"include": [
+		"src/**/*"
+	],
+	"exclude": [
+		"node_modules",
+		"dist"
+	]
+}
+
+
+================================================
+FILE: tsdown.config.ts
+================================================
+import { defineConfig } from 'tsdown'
+
+export default defineConfig({
+	entry: 'src/index.ts',
+	format: ['esm'],
+	platform: 'node',
+	target: 'node20',
+	clean: true,
+	dts: true,
+	shims: false,
+	banner: {
+		js: '#!/usr/bin/env node',
+	},
+})
+
+
+================================================
+FILE: src/cli.ts
+================================================
+import { stdout } from 'node:process'
+import { readFile, writeFile, access } from 'node:fs/promises'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
+import pc from 'picocolors'
+import { configManager } from './config.js'
+import type { ClaudeDesktopConfig } from './types.js'
+
+interface MmcpServer {
+	command: string
+	args: string[]
+	env?: Record<string, string>
+}
+
+interface MmcpConfig {
+	mcpServers: Record<string, MmcpServer>
+	agents?: string[]
+}
+
+export async function handleCliArgs(): Promise<boolean> {
+	const [command] = process.argv.slice(2)
+
+	switch (command) {
+		case 'export-to-mmcp':
+			await exportToMmcp()
+			return true
+		case 'import-from-mmcp':
+			await importFromMmcp()
+			return true
+		default:
+			return false
+	}
+}
+
+async function exportToMmcp(): Promise<void> {
+	try {
+		stdout.write(pc.bold(pc.blue('\n  📤 Exporting Claude Code MCP servers to mmcp\n\n')))
+
+		// Read Claude Code configuration
+		const claudeConfig = await configManager.load()
+		const serverCount = Object.keys(claudeConfig.mcpServers).length
+
+		if (serverCount === 0) {
+			stdout.write(pc.yellow('  ⚠️  No MCP servers found in Claude Code configuration\n'))
+			stdout.write(pc.gray('  Make sure you have MCP servers configured in ~/.claude.json\n\n'))
+			return
+		}
+
+		stdout.write(pc.cyan(`  🔍 Found ${serverCount} MCP server(s):\n`))
+		for (const [name, config] of Object.entries(claudeConfig.mcpServers)) {
+			stdout.write(pc.gray(`    • ${name} (${config.command})\n`))
+		}
+		stdout.write('\n')
+
+		// Read existing mmcp configuration
+		const mmcpPath = join(homedir(), '.mmcp.json')
+		let mmcpConfig: MmcpConfig = { mcpServers: {} }
+
+		try {
+			await access(mmcpPath)
+			const mmcpContent = await readFile(mmcpPath, 'utf-8')
+			const existingConfig = JSON.parse(mmcpContent)
+			// Preserve existing structure and merge servers
+			mmcpConfig = {
+				mcpServers: existingConfig.mcpServers || {},
+				...(existingConfig.agents && { agents: existingConfig.agents })
+			}
+		} catch {
+			// File doesn't exist, that's okay
+		}
+
+		// Convert and merge servers
+		let newServersCount = 0
+		let updatedServersCount = 0
+
+		for (const [name, claudeServerConfig] of Object.entries(claudeConfig.mcpServers)) {
+			const mmcpServer: MmcpServer = {
+				command: claudeServerConfig.command,
+				args: claudeServerConfig.args
+			}
+
+			if (claudeServerConfig.env && Object.keys(claudeServerConfig.env).length > 0) {
+				mmcpServer.env = claudeServerConfig.env
+			}
+
+			if (mmcpConfig.mcpServers[name]) {
+				updatedServersCount++
+				stdout.write(pc.yellow(`    ✓ Updated: ${name}\n`))
+			} else {
+				newServersCount++
+				stdout.write(pc.green(`    ✓ Added: ${name}\n`))
+			}
+
+			mmcpConfig.mcpServers[name] = mmcpServer
+		}
+
+		// Write mmcp configuration
+		const mmcpContent = JSON.stringify(mmcpConfig, null, 2)
+		await writeFile(mmcpPath, mmcpContent, 'utf-8')
+
+		stdout.write('\n')
+		stdout.write(pc.green('  ✅ Export completed successfully!\n'))
+		stdout.write(pc.gray(`    • New servers: ${newServersCount}\n`))
+		stdout.write(pc.gray(`    • Updated servers: ${updatedServersCount}\n`))
+		stdout.write(pc.gray(`    • Saved to: ${mmcpPath}\n\n`))
+
+		stdout.write(pc.bold(pc.cyan('  🚀 Next steps:\n')))
+		stdout.write(pc.gray('    1. Install mmcp (if not installed): npm install -g mmcp\n'))
+		stdout.write(pc.gray('    2. Add target CLI: mmcp agents add codex-cli\n'))
+		stdout.write(pc.gray('    3. Apply settings: mmcp apply\n\n'))
+
+	} catch (error) {
+		stdout.write(pc.red(`\n  ❌ Export failed: ${error instanceof Error ? error.message : 'Unknown error'}\n\n`))
+		process.exit(1)
+	}
+}
+
+async function importFromMmcp(): Promise<void> {
+	stdout.write(pc.bold(pc.blue('\n  📥 Importing from mmcp to Claude Code\n\n')))
+	stdout.write(pc.yellow('  ⚠️  Import functionality will be implemented in a future version\n'))
+	stdout.write(pc.gray('  For now, please use mmcp commands directly:\n'))
+	stdout.write(pc.gray('    mmcp agents add claude-code\n'))
+	stdout.write(pc.gray('    mmcp apply\n\n'))
+}
+
+
+================================================
+FILE: src/config.ts
+================================================
+import { readFile, writeFile, access } from 'node:fs/promises'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
+import type { ClaudeDesktopConfig, MCPServer, ConfigManager, BackupConfig } from './types.js'
+
+export class ClaudeConfigManager implements ConfigManager {
+	private readonly configPath: string
+	private readonly backupPath: string
+
+	constructor() {
+		this.configPath = join(homedir(), '.claude.json')
+		this.backupPath = join(homedir(), '.ccmcp_backup.json')
+	}
+
+	getBackupPath(): string {
+		return this.backupPath
+	}
+
+	async load(): Promise<ClaudeDesktopConfig> {
+		try {
+			await access(this.configPath)
+			const content = await readFile(this.configPath, 'utf-8')
+			const fullConfig = JSON.parse(content)
+			
+			// Extract only the mcpServers part for our purposes
+			const config: ClaudeDesktopConfig = {
+				mcpServers: fullConfig.mcpServers || {}
+			}
+			
+			return config
+		} catch {
+			// If file doesn't exist or is invalid, return default config
+			return {
+				mcpServers: {}
+			}
+		}
+	}
+
+	async save(config: ClaudeDesktopConfig): Promise<void> {
+		// Load the full config file first
+		const content = await readFile(this.configPath, 'utf-8')
+		const fullConfig = JSON.parse(content)
+		
+		// Update only the mcpServers part
+		fullConfig.mcpServers = config.mcpServers
+		
+		// Save the full config back
+		const updatedContent = JSON.stringify(fullConfig, null, 2)
+		await writeFile(this.configPath, updatedContent, 'utf-8')
+	}
+
+	async listServers(): Promise<MCPServer[]> {
+		const config = await this.load()
+		const backup = await this.loadBackup()
+		const servers: MCPServer[] = []
+		
+		// Add active servers
+		for (const [name, serverConfig] of Object.entries(config.mcpServers)) {
+			servers.push({
+				name,
+				command: serverConfig.command,
+				args: serverConfig.args,
+				enabled: true // Active servers are enabled
+			})
+		}
+		
+		// Add disabled servers from backup
+		for (const [name, serverConfig] of Object.entries(backup.disabledServers)) {
+			servers.push({
+				name,
+				command: serverConfig.command,
+				args: serverConfig.args,
+				enabled: false // Backup servers are disabled
+			})
+		}
+		
+		return servers
+	}
+
+	async toggleServer(serverName: string): Promise<{ newState: boolean }> {
+		const config = await this.load()
+		const backup = await this.loadBackup()
+		
+		// Check if server is currently active
+		if (config.mcpServers[serverName]) {
+			// Server is active, disable it (move to backup)
+			backup.disabledServers[serverName] = config.mcpServers[serverName]
+			delete config.mcpServers[serverName]
+			
+			await Promise.all([
+				this.save(config),
+				this.saveBackup(backup)
+			])
+			
+			return { newState: false } // Now disabled
+		}
+		
+		// Check if server is in backup (disabled)
+		if (backup.disabledServers[serverName]) {
+			// Server is disabled, enable it (move back to active)
+			config.mcpServers[serverName] = backup.disabledServers[serverName]
+			delete backup.disabledServers[serverName]
+			
+			await Promise.all([
+				this.save(config),
+				this.saveBackup(backup)
+			])
+			
+			return { newState: true } // Now enabled
+		}
+		
+		throw new Error(`Server '${serverName}' not found`)
+	}
+
+	async enableServer(serverName: string): Promise<void> {
+		const backup = await this.loadBackup()
+		
+		if (backup.disabledServers[serverName]) {
+			// Server is disabled, enable it
+			await this.toggleServer(serverName)
+		} else {
+			// Server might already be enabled or not found
+			const config = await this.load()
+			if (!config.mcpServers[serverName]) {
+				throw new Error(`Server '${serverName}' not found`)
+			}
+			// Already enabled, do nothing
+		}
+	}
+
+	async addServer(name: string, command: string, args: string[]): Promise<void> {
+		const config = await this.load()
+		
+		if (config.mcpServers[name]) {
+			throw new Error(`Server '${name}' already exists`)
+		}
+		
+		config.mcpServers[name] = { command, args }
+		await this.save(config)
+	}
+
+	async disableServer(serverName: string): Promise<void> {
+		const config = await this.load()
+		
+		if (config.mcpServers[serverName]) {
+			// Server is active, disable it
+			await this.toggleServer(serverName)
+		} else {
+			// Server might already be disabled or not found
+			const backup = await this.loadBackup()
+			if (!backup.disabledServers[serverName]) {
+				throw new Error(`Server '${serverName}' not found`)
+			}
+			// Already disabled, do nothing
+		}
+	}
+
+	async loadBackup(): Promise<BackupConfig> {
+		try {
+			await access(this.backupPath)
+			const content = await readFile(this.backupPath, 'utf-8')
+			return JSON.parse(content)
+		} catch {
+			return { disabledServers: {} }
+		}
+	}
+
+	async saveBackup(config: BackupConfig): Promise<void> {
+		const content = JSON.stringify(config, null, 2)
+		await writeFile(this.backupPath, content, 'utf-8')
+	}
+}
+
+export const configManager = new ClaudeConfigManager()
+
+
+================================================
+FILE: src/index.ts
+================================================
+import { stdout } from 'node:process'
+import pc from 'picocolors'
+import { configManager } from './config.js'
+import { InteractiveTUI, displayServerList, type TUIItem } from './tui.js'
+import { MCPServerMonitor } from './monitor.js'
+import type { MCPServer } from './types.js'
+import { handleCliArgs } from './cli.js'
+
+class CCMCPApp {
+	private monitor = new MCPServerMonitor()
+
+	async run(): Promise<void> {
+		try {
+			// Handle CLI arguments first
+			if (await handleCliArgs()) {
+				return
+			}
+
+			// Show welcome message
+			this.showWelcome()
+
+			// Check if running in CI/non-interactive mode or if no args provided for non-interactive
+			if (process.env.CI === 'true' || !process.stdout.isTTY || process.argv.includes('--help') || process.argv.includes('-h')) {
+				await this.runNonInteractive()
+				return
+			}
+
+			// Start interactive mode
+			await this.runInteractive()
+		} catch (error) {
+			console.error(pc.red('Error:'), error instanceof Error ? error.message : 'Unknown error')
+			process.exit(1)
+		}
+	}
+
+	private showWelcome(): void {
+		stdout.write(pc.bold(pc.blue('\n  🔧 ccmcp - Claude Code MCP Control Panel\n')))
+		stdout.write(pc.gray('  Interactive MCP server management tool\n'))
+		
+		// Debug info for troubleshooting
+		if (process.env.DEBUG) {
+			console.log('Debug: isTTY =', process.stdout.isTTY)
+			console.log('Debug: CI =', process.env.CI)
+			console.log('Debug: argv =', process.argv)
+		}
+	}
+
+	private async runNonInteractive(): Promise<void> {
+		const servers = await configManager.listServers()
+		displayServerList(servers)
+	}
+
+	private async runInteractive(): Promise<void> {
+		let running = true
+
+		while (running) {
+			const servers = await configManager.listServers()
+			
+			// Check server status
+			const statusList = await this.monitor.checkAllServers(servers)
+			const statusMap = new Map(statusList.map(s => [s.name, s]))
+
+			// Create menu items
+			const menuItems: TUIItem[] = [
+				{ label: '📋 List all servers', value: 'list' },
+				{ label: '🔄 Refresh status', value: 'refresh' },
+				...servers.map(server => {
+					const status = statusMap.get(server.name)
+					let itemStatus: TUIItem['status'] = 'enabled'
+					
+					if (status) {
+						itemStatus = status.running ? 'running' : 'error'
+					}
+					
+					return {
+						label: `${server.enabled ? '✓' : '✗'} ${server.name}`,
+						value: `toggle:${server.name}`,
+						status: itemStatus
+					}
+				}),
+				{ label: '❌ Quit', value: 'quit' }
+			]
+
+			const tui = new InteractiveTUI('MCP Server Manager')
+			tui.setItems(menuItems)
+			
+			const choice = await tui.show()
+			
+			if (!choice || choice === 'quit') {
+				running = false
+				continue
+			}
+
+			await this.handleChoice(choice, servers)
+		}
+
+		stdout.write(pc.green('\n  👋 Goodbye!\n\n'))
+	}
+
+	private async handleChoice(choice: string, servers: MCPServer[]): Promise<void> {
+		switch (choice) {
+			case 'list':
+				await this.showDetailedList(servers)
+				break
+				
+			case 'refresh':
+				stdout.write(pc.yellow('\n  🔄 Refreshing server status...\n'))
+				await new Promise(resolve => setTimeout(resolve, 1000)) // Brief pause
+				break
+				
+			default:
+				if (choice.startsWith('toggle:')) {
+					const serverName = choice.replace('toggle:', '')
+					await this.toggleServer(serverName)
+				}
+		}
+	}
+
+	private async showDetailedList(servers: MCPServer[]): Promise<void> {
+		stdout.write('\x1b[2J\x1b[H') // Clear screen
+		
+		stdout.write(pc.bold(pc.blue('\n  📋 Detailed Server Information\n\n')))
+		
+		if (servers.length === 0) {
+			stdout.write(pc.yellow('  No MCP servers configured\n'))
+		} else {
+			// Check server status
+			const statusList = await this.monitor.checkAllServers(servers)
+			const statusMap = new Map(statusList.map(s => [s.name, s]))
+			
+			for (const server of servers) {
+				const status = statusMap.get(server.name)
+				
+				stdout.write(pc.bold(`  ${server.name}\n`))
+				stdout.write(pc.gray(`    Command: ${server.command}\n`))
+				stdout.write(pc.gray(`    Args: ${server.args.join(' ')}\n`))
+				
+				if (status) {
+					const statusText = status.running 
+						? pc.green('✓ Running') 
+						: pc.red('✗ Not running')
+					stdout.write(`    Status: ${statusText}`)
+					
+					if (status.error) {
+						stdout.write(pc.red(` (${status.error})`))
+					}
+					stdout.write('\n')
+				}
+				
+				stdout.write('\n')
+			}
+		}
+		
+		stdout.write(pc.gray('  Press any key to continue...'))
+		
+		// Wait for keypress
+		return new Promise(resolve => {
+			process.stdin.setRawMode(true)
+			process.stdin.resume()
+			process.stdin.once('data', () => {
+				process.stdin.setRawMode(false)
+				process.stdin.pause()
+				resolve()
+			})
+		})
+	}
+
+	private async toggleServer(serverName: string): Promise<void> {
+		try {
+			// First get current state to show correct confirmation message
+			const servers = await configManager.listServers()
+			const server = servers.find(s => s.name === serverName)
+			if (!server) {
+				stdout.write(pc.red(`\n  ✗ Server '${serverName}' not found\n`))
+				return
+			}
+			
+			const action = server.enabled ? 'Disable' : 'Enable'
+			const confirmed = await InteractiveTUI.showConfirmation(
+				`${action} server '${serverName}'?`
+			)
+			
+			if (confirmed) {
+				const result = await configManager.toggleServer(serverName)
+				const newAction = result.newState ? 'enabled' : 'disabled'
+				stdout.write(pc.green(`\n  ✓ Server '${serverName}' ${newAction}\n`))
+			} else {
+				stdout.write(pc.gray('\n  Operation cancelled\n'))
+			}
+		} catch (error) {
+			stdout.write(pc.red(`\n  ✗ Error: ${error instanceof Error ? error.message : 'Unknown error'}\n`))
+		}
+		
+		// Brief pause to show message
+		await new Promise(resolve => setTimeout(resolve, 1500))
+	}
+}
+
+// Run the app
+const app = new CCMCPApp()
+app.run().catch(console.error)
+
+
+================================================
+FILE: src/monitor.ts
+================================================
+import { spawn } from 'node:child_process'
+import type { MCPServer } from './types.js'
+
+export interface ServerStatus {
+	name: string
+	running: boolean
+	pid?: number
+	error?: string
+}
+
+export class MCPServerMonitor {
+	async checkServerStatus(server: MCPServer): Promise<ServerStatus> {
+		try {
+			// For simple check, try to spawn the command with --help or similar
+			// This is a basic implementation - a more sophisticated one would 
+			// try to connect to the actual MCP server
+			const result = await this.testCommand(server.command, server.args)
+			
+			return {
+				name: server.name,
+				running: result.success,
+				error: result.success ? undefined : result.error
+			}
+		} catch (error) {
+			return {
+				name: server.name,
+				running: false,
+				error: error instanceof Error ? error.message : 'Unknown error'
+			}
+		}
+	}
+
+	async checkAllServers(servers: MCPServer[]): Promise<ServerStatus[]> {
+		const promises = servers.map(server => this.checkServerStatus(server))
+		return Promise.all(promises)
+	}
+
+	private testCommand(command: string, args: string[]): Promise<{ success: boolean; error?: string }> {
+		return new Promise((resolve) => {
+			const child = spawn(command, [...args, '--help'], {
+				stdio: 'pipe',
+				timeout: 5000
+			})
+
+			let hasResolved = false
+
+			child.on('spawn', () => {
+				if (!hasResolved) {
+					hasResolved = true
+					child.kill()
+					resolve({ success: true })
+				}
+			})
+
+			child.on('error', (error) => {
+				if (!hasResolved) {
+					hasResolved = true
+					resolve({ 
+						success: false, 
+						error: `Command not found: ${error.message}` 
+					})
+				}
+			})
+
+			child.on('exit', (code) => {
+				if (!hasResolved) {
+					hasResolved = true
+					resolve({ 
+						success: code === 0 || code === null,
+						error: code !== 0 && code !== null ? `Exit code: ${code}` : undefined
+					})
+				}
+			})
+
+			// Fallback timeout
+			setTimeout(() => {
+				if (!hasResolved) {
+					hasResolved = true
+					child.kill()
+					resolve({ success: false, error: 'Timeout' })
+				}
+			}, 6000)
+		})
+	}
+}
+
+
+================================================
+FILE: src/presets.ts
+================================================
+export interface MCPServerPreset {
+	name: string
+	displayName: string
+	command: string
+	args: string[]
+	description: string
+}
+
+export const MCP_SERVER_PRESETS: MCPServerPreset[] = [
+	{
+		name: 'context7',
+		displayName: 'Context7 MCP',
+		command: 'npx',
+		args: ['context7-mcp'],
+		description: 'Official library documentation lookup'
+	},
+	{
+		name: 'sequential-thinking',
+		displayName: 'Sequential Thinking MCP',
+		command: 'npx',
+		args: ['sequential-thinking-mcp'],
+		description: 'Multi-step reasoning and analysis'
+	},
+	{
+		name: 'arxiv',
+		displayName: 'ArXiv MCP',
+		command: 'npx',
+		args: ['arxiv-mcp-server'],
+		description: 'Search and download academic papers'
+	},
+	{
+		name: 'playwright',
+		displayName: 'Playwright MCP',
+		command: 'npx',
+		args: ['playwright-mcp'],
+		description: 'Browser automation and testing'
+	},
+	{
+		name: 'serena',
+		displayName: 'Serena MCP',
+		command: 'npx',
+		args: ['serena-mcp'],
+		description: 'Semantic code understanding'
+	},
+	{
+		name: 'youtube',
+		displayName: 'YouTube MCP',
+		command: 'npx',
+		args: ['youtube-mcp'],
+		description: 'YouTube content access'
+	},
+	{
+		name: 'notion',
+		displayName: 'Notion MCP',
+		command: 'npx',
+		args: ['notion-mcp'],
+		description: 'Notion workspace integration'
+	},
+	{
+		name: 'chrome-tabs',
+		displayName: 'Chrome Tabs MCP',
+		command: 'npx',
+		args: ['chrome-tabs-mcp'],
+		description: 'Browser tab access and control'
+	}
+]
+
+
+================================================
+FILE: src/tui.ts
+================================================
+import { stdin, stdout } from 'node:process'
+import pc from 'picocolors'
+import type { MCPServer } from './types.js'
+
+export interface TUIItem {
+	label: string
+	value: string
+	status?: 'enabled' | 'disabled' | 'running' | 'stopped' | 'error'
+}
+
+export class InteractiveTUI {
+	private selectedIndex = 0
+	private items: TUIItem[] = []
+	private title = ''
+
+	constructor(title: string) {
+		this.title = title
+	}
+
+	setItems(items: TUIItem[]): void {
+		this.items = items
+		this.selectedIndex = Math.min(this.selectedIndex, items.length - 1)
+	}
+
+	private renderScreen(): void {
+		// Clear screen
+		stdout.write('\x1b[2J\x1b[H')
+		
+		// Title
+		stdout.write(pc.bold(pc.blue(`\n  ${this.title}\n\n`)))
+		
+		if (this.items.length === 0) {
+			stdout.write(pc.yellow('  No MCP servers found\n'))
+			return
+		}
+
+		// Items
+		this.items.forEach((item, index) => {
+			const isSelected = index === this.selectedIndex
+			const prefix = isSelected ? pc.green('▶ ') : '  '
+			
+			let statusColor = pc.gray
+			let statusText = ''
+			
+			switch (item.status) {
+				case 'enabled':
+					statusColor = pc.green
+					statusText = ' ✓'
+					break
+				case 'disabled':
+					statusColor = pc.red
+					statusText = ' ✗'
+					break
+				case 'running':
+					statusColor = pc.green
+					statusText = ' ●'
+					break
+				case 'stopped':
+					statusColor = pc.red
+					statusText = ' ○'
+					break
+				case 'error':
+					statusColor = pc.red
+					statusText = ' !'
+					break
+			}
+			
+			const label = isSelected 
+				? pc.inverse(item.label)
+				: item.label
+				
+			stdout.write(`${prefix}${label}${statusColor(statusText)}\n`)
+		})
+		
+		// Instructions
+		stdout.write(pc.gray('\n  ↑/↓: Navigate  SPACE: Toggle  Q: Quit\n'))
+	}
+
+	async show(): Promise<string | null> {
+		return new Promise((resolve) => {
+			// Set raw mode for key capture
+			stdin.setRawMode(true)
+			stdin.resume()
+			stdin.setEncoding('utf8')
+			
+			const cleanup = () => {
+				stdin.setRawMode(false)
+				stdin.pause()
+				stdin.removeAllListeners('data')
+			}
+
+			this.renderScreen()
+
+			stdin.on('data', (key: string) => {
+				const keyCode = key.charCodeAt(0)
+				
+				// Debug: uncomment to see key codes
+				// console.log('Key pressed:', key, 'KeyCode:', keyCode)
+				
+				switch (keyCode) {
+					case 3: // Ctrl+C
+					case 113: // q
+					case 81: // Q
+						cleanup()
+						resolve(null)
+						break
+						
+					case 27: // Escape sequence
+						if (key.length === 3) {
+							const arrow = key.charCodeAt(2)
+							if (arrow === 65) { // Up arrow
+								this.selectedIndex = Math.max(0, this.selectedIndex - 1)
+								this.renderScreen()
+							} else if (arrow === 66) { // Down arrow
+								this.selectedIndex = Math.min(this.items.length - 1, this.selectedIndex + 1)
+								this.renderScreen()
+							}
+						}
+						break
+						
+					case 32: // Space
+						if (this.items.length > 0) {
+							cleanup()
+							resolve(this.items[this.selectedIndex].value)
+						}
+						break
+						
+					case 13: // Enter
+						if (this.items.length > 0) {
+							cleanup()
+							resolve(this.items[this.selectedIndex].value)
+						}
+						break
+				}
+			})
+		})
+	}
+
+	static async showConfirmation(message: string): Promise<boolean> {
+		stdout.write(`\n${pc.yellow('?')} ${message} ${pc.gray('(y/N)')} `)
+		
+		return new Promise((resolve) => {
+			stdin.setRawMode(true)
+			stdin.resume()
+			stdin.setEncoding('utf8')
+			
+			const cleanup = () => {
+				stdin.setRawMode(false)
+				stdin.pause()
+				stdin.removeAllListeners('data')
+				stdout.write('\n')
+			}
+
+			stdin.once('data', (key: string) => {
+				cleanup()
+				const response = key.toLowerCase().trim()
+				resolve(response === 'y' || response === 'yes')
+			})
+		})
+	}
+}
+
+export function displayServerList(servers: MCPServer[]): void {
+	stdout.write(pc.bold(pc.blue('\n  MCP Servers\n\n')))
+	
+	if (servers.length === 0) {
+		stdout.write(pc.yellow('  No MCP servers configured\n'))
+		return
+	}
+	
+	servers.forEach(server => {
+		const status = server.enabled ? pc.green('✓ Enabled') : pc.red('✗ Disabled')
+		stdout.write(`  ${pc.bold(server.name)} - ${status}\n`)
+		stdout.write(pc.gray(`    Command: ${server.command} ${server.args.join(' ')}\n`))
+	})
+	
+	stdout.write('\n')
+}
+
+
+================================================
+FILE: src/types.ts
+================================================
+export interface MCPServer {
+	name: string
+	command: string
+	args: string[]
+	enabled: boolean
+	status?: 'running' | 'stopped' | 'error'
+}
+
+export interface ServerConfig {
+	command: string
+	args: string[]
+	env?: Record<string, string>
+	type?: string
+	timeout?: number
+	alwaysAllow?: string[]
+}
+
+export interface ClaudeDesktopConfig {
+	mcpServers: Record<string, ServerConfig>
+}
+
+export interface BackupConfig {
+	disabledServers: Record<string, ServerConfig>
+}
+
+export interface ConfigManager {
+	load(): Promise<ClaudeDesktopConfig>
+	save(config: ClaudeDesktopConfig): Promise<void>
+	listServers(): Promise<MCPServer[]>
+	toggleServer(serverName: string): Promise<{ newState: boolean }>
+	loadBackup(): Promise<BackupConfig>
+	saveBackup(config: BackupConfig): Promise<void>
+	getBackupPath(): string
+	enableServer(serverName: string): Promise<void>
+	disableServer(serverName: string): Promise<void>
+	addServer(name: string, command: string, args: string[]): Promise<void>
+}
+
