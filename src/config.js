@@ -20,6 +20,10 @@ function normalizeTarget(target) {
   return target === "codex" ? "codex" : "claude";
 }
 
+function preferredMcpServersKey(target) {
+  return normalizeTarget(target) === "codex" ? "mcp_servers" : "mcpServers";
+}
+
 function getTargetPaths(target) {
   const t = normalizeTarget(target);
   if (t === "codex") {
@@ -64,12 +68,27 @@ async function writeTomlAtomic(path, obj) {
   await fs.rename(tmp, path);
 }
 
-function ensureMcpServers(fullConfig) {
+function ensureMcpServers(fullConfig, preferredKey = "mcpServers") {
   if (!fullConfig || typeof fullConfig !== "object") fullConfig = {};
 
   const hasCamel = fullConfig.mcpServers && typeof fullConfig.mcpServers === "object";
   const hasSnake = fullConfig.mcp_servers && typeof fullConfig.mcp_servers === "object";
-  const key = hasCamel ? "mcpServers" : hasSnake ? "mcp_servers" : "mcpServers";
+
+  // codex(TOML) では mcp_servers を正とする（既存の mcpServers をあれば移行）
+  if (preferredKey === "mcp_servers" && hasCamel && !hasSnake) {
+    fullConfig.mcp_servers = fullConfig.mcpServers;
+    delete fullConfig.mcpServers;
+  }
+
+  const hasPreferred =
+    fullConfig[preferredKey] && typeof fullConfig[preferredKey] === "object";
+  const key = hasPreferred
+    ? preferredKey
+    : fullConfig.mcpServers && typeof fullConfig.mcpServers === "object"
+      ? "mcpServers"
+      : fullConfig.mcp_servers && typeof fullConfig.mcp_servers === "object"
+        ? "mcp_servers"
+        : preferredKey;
 
   if (!fullConfig[key] || typeof fullConfig[key] !== "object") fullConfig[key] = {};
   return { fullConfig, key, mcpServers: fullConfig[key] };
@@ -90,17 +109,19 @@ function ensureDisabledServers(backupConfig) {
 
 async function loadFullConfig(target) {
   const { CONFIG_PATH, format } = getTargetPaths(target);
+  const key = preferredMcpServersKey(target);
   if (format === "toml") {
-    const { fullConfig } = ensureMcpServers(await readToml(CONFIG_PATH, {}));
+    const { fullConfig } = ensureMcpServers(await readToml(CONFIG_PATH, {}), key);
     return fullConfig;
   }
-  const { fullConfig } = ensureMcpServers(await readJson(CONFIG_PATH, {}));
+  const { fullConfig } = ensureMcpServers(await readJson(CONFIG_PATH, {}), key);
   return fullConfig;
 }
 
 async function saveFullConfig(target, fullConfig) {
   const { CONFIG_PATH, format } = getTargetPaths(target);
-  const { fullConfig: normalized } = ensureMcpServers(fullConfig);
+  const key = preferredMcpServersKey(target);
+  const { fullConfig: normalized } = ensureMcpServers(fullConfig, key);
   if (format === "toml") {
     await writeTomlAtomic(CONFIG_PATH, normalized);
     return;
@@ -137,7 +158,7 @@ export async function listServers(target = "claude") {
   const full = await loadFullConfig(target);
   const backup = await loadBackupConfig(target);
 
-  const { mcpServers } = ensureMcpServers(full);
+  const { mcpServers } = ensureMcpServers(full, preferredMcpServersKey(target));
   const { disabledServers } = ensureDisabledServers(backup);
 
   const enabled = Object.entries(mcpServers).map(([name, cfg]) => ({
@@ -160,7 +181,7 @@ export async function toggleServer(target = "claude", name) {
   const full = await loadFullConfig(target);
   const backup = await loadBackupConfig(target);
 
-  const { mcpServers } = ensureMcpServers(full);
+  const { mcpServers } = ensureMcpServers(full, preferredMcpServersKey(target));
   const { disabledServers } = ensureDisabledServers(backup);
 
   if (mcpServers[name]) {

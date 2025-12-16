@@ -94,8 +94,8 @@ mcp-toggle claude help
 
 ## 動作
 
-- **有効化**: バックアップ側の `disabledServers` から設定側の `mcpServers` に移動
-- **無効化**: 設定側の `mcpServers` からバックアップ側の `disabledServers` に移動
+- **有効化**: バックアップ側（`disabledServers`）から設定側（Claude: `mcpServers` / Codex: `mcp_servers`）に移動
+- **無効化**: 設定側（Claude: `mcpServers` / Codex: `mcp_servers`）からバックアップ側（`disabledServers`）に移動
 
 対象別のファイル：
 - **claude**: `~/.claude.json`, `~/.ccmcp_backup.json`

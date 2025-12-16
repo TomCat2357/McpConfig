@@ -26,6 +26,7 @@
   },
   "homepage": "https://github.com/TomCat2357/McpConfig#readme",
   "dependencies": {
+    "@anthropic-ai/claude-code": "^2.0.70",
     "@iarna/toml": "^3.0.0"
   }
 }
